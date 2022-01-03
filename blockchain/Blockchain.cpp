@@ -5,6 +5,9 @@
 #include "Blockchain.h"
 
 Blockchain::Blockchain() {
+    CURL *curl = curl_easy_init();
+    if (curl) {
 
+    }
 }
 

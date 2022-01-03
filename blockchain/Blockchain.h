@@ -6,6 +6,7 @@
 #define BLOCKCHAIN_DNS_BLOCKCHAIN_H
 
 #include <iostream>
+#include <curl/curl.h>
 
 class Blockchain {
 public:
