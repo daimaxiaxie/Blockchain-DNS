@@ -52,9 +52,10 @@ void Server::run() {
     taskManager.set_epoll(epoll_fd);
     taskManager.set_buf(config->SendBuf());
     taskManager.set_domain(config->Domain());
+    taskManager.set_adjust_threahold(config->AdjustThreshold());
 
     while (!EXIT) {
-        int fds = epoll_wait(epoll_fd, events, 16, -1);
+        int fds = epoll_wait(epoll_fd, events, 16, 10);
         if (fds < 0) {
             perror("Epoll wait failed : ");
             continue;

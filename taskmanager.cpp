@@ -35,6 +35,8 @@ TaskManager::TaskManager(int min, int max, int blockchain, std::string blockchai
           is_forward(
                   forward),
           cache(Cache::GetCache()) {
+    adjust.min = min;
+    adjust.max = max;
     while (min > 0) {
         create_thread();
         --min;
@@ -42,6 +44,8 @@ TaskManager::TaskManager(int min, int max, int blockchain, std::string blockchai
     if (forward && forward_threads > 0) {
         this->forward.init(forward_threads);
     }
+    adjust.adjust = 0;
+    adjust.last = 0;
 }
 
 TaskManager::~TaskManager() {
@@ -52,7 +56,7 @@ void TaskManager::create_thread() {
     threads.emplace_back([this] {
         int id = this->active.load();
         while (!this->active.compare_exchange_weak(id, id + 1)) {
-
+            id = this->active.load();
         }
         ++id;
         std::unique_lock<std::mutex> lock(this->mtx, std::defer_lock);
@@ -72,11 +76,17 @@ void TaskManager::create_thread() {
             if (run_task) {
                 task_handler(task, dns);
                 if (task.state != Finish && task.state != Discard) {
-                    add_task(task);
+                    // add_task(task);
+                    lock.lock();
+                    tasks.push(task);
+                    lock.unlock();
                 }
             }
         }
+        this->threads.pop_back();
+        printf("TaskManager thread %d exit\n", id);
     });
+    threads.back().detach();
 }
 
 void TaskManager::add_task(Task task) {
@@ -85,6 +95,7 @@ void TaskManager::add_task(Task task) {
         tasks.push(task);
     }
     this->cond.notify_all();
+    adjust_thread();
 }
 
 void TaskManager::exit() {
@@ -109,6 +120,10 @@ void TaskManager::set_domain(std::string domain) {
 
 void TaskManager::add_forward_dns(std::string &dns) {
     forward.add_dns(dns);
+}
+
+void TaskManager::set_adjust_threahold(unsigned long val) {
+    thread_adjust_threshold = val;
 }
 
 
@@ -309,6 +324,33 @@ bool TaskManager::send_buf_init(Task &task) {
         return false;
     }
     return true;
+}
+
+void TaskManager::adjust_thread() {
+    unsigned long now = tasks.size();
+    if (adjust.last < now) {
+        ++adjust.adjust;
+    } else if (adjust.last > now) {
+        --adjust.adjust;
+    }
+
+    int act = active.load();
+    if (adjust.last > act && adjust.adjust > thread_adjust_threshold) {
+        if (act < adjust.max) {
+            create_thread();
+            printf("Active : %d\n", active.load());
+        }
+        adjust.adjust = 0;
+    } else if (adjust.last < act && adjust.adjust < -thread_adjust_threshold) {
+        if (act > adjust.min) {
+            --active;
+            cond.notify_all();
+            printf("Active : %d\n", active.load());
+        }
+        adjust.adjust = 0;
+    }
+
+    adjust.last = now;
 }
 
 bool endwith(char *str, std::string &param) {

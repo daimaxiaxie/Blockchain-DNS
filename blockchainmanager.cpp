@@ -29,7 +29,11 @@ void BlockchainManager::create_thread() {
         Request task;
         bool run_task = false;
         Blockchain blockchain;
-        blockchain.connect(addr);
+        if (!blockchain.connect(addr)) {
+            //this->threads.pop_back();
+            //return;
+        }
+
         while (!quit.load()) {
             lock.lock();
             this->cond.wait(lock, [this]() { return !this->tasks.empty() || this->quit.load(); });
@@ -63,7 +67,9 @@ void BlockchainManager::create_thread() {
                 }
             }
         }
+        this->threads.pop_back();
     });
+    threads.back().detach();
 }
 
 void BlockchainManager::exit() {

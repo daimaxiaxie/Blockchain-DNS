@@ -6,7 +6,7 @@
 
 Config::Config() : blockchain_node("http://127.0.0.1:9933"), read_timeout(100), blockchain_domain("default"),
                    forward(false), tasks_min(get_nprocs()), tasks_max(get_nprocs()), recv_buf(512), send_buf(512),
-                   blockchain_threads(get_nprocs() * 2), forward_threads(get_nprocs() * 2) {
+                   blockchain_threads(get_nprocs() * 2), forward_threads(get_nprocs() * 2),thread_adjust_threshold(32) {
 
 }
 
@@ -69,6 +69,9 @@ Config::Config(const char *file) : Config() {
                 blockchain_threads = root["blockchain_threads"].asInt();
             }
         }
+        if (!root["adjust_threshold"].isNull() && !root["adjust_threshold"].empty()) {
+            thread_adjust_threshold = root["adjust_threshold"].asUInt();
+        }
     }
     in.close();
 }
@@ -120,6 +123,10 @@ std::vector<std::string> &Config::ForwardDNS() {
 
 int Config::ForwardThreads() {
     return forward_threads;
+}
+
+unsigned int Config::AdjustThreshold() {
+    return thread_adjust_threshold;
 }
 
 bool string_copy_to_char(std::string &src, char *dest, int len) {

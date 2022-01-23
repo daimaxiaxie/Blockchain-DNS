@@ -37,7 +37,9 @@ public:
 
     int ForwardThreads();
 
-    std::vector<std::string>& ForwardDNS();
+    std::vector<std::string> &ForwardDNS();
+
+    unsigned int AdjustThreshold();
 
 private:
     std::string blockchain_node;
@@ -46,6 +48,7 @@ private:
     bool forward;
     int tasks_min;
     int tasks_max;
+    unsigned int thread_adjust_threshold;
     int recv_buf;
     int send_buf;
     int blockchain_threads;

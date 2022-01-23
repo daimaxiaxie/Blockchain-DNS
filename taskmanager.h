@@ -17,6 +17,8 @@
 #include "forward.h"
 #include "dns.h"
 
+#define THREAD_ADJUST_THRESHLOD 32
+
 enum State {
     Receiving,
     Parsing,
@@ -57,6 +59,13 @@ struct Task {
     void clear_without_send();
 };
 
+struct Adjust{
+    unsigned long last;
+    int adjust;
+    int min;
+    int max;
+};
+
 class TaskManager {
 public:
     TaskManager(int min, int max, int blockchain, std::string blockchain_ip, bool forward, int forward_threads);
@@ -77,6 +86,8 @@ public:
 
     void add_forward_dns(std::string &dns);
 
+    void set_adjust_threahold(unsigned long val);
+
 private:
     bool task_handler(Task &task, DNS &dns);
 
@@ -96,6 +107,8 @@ private:
 
     bool send_buf_init(Task &task);
 
+    void adjust_thread();
+
     int ep;
     int send_buf_size;
 
@@ -105,6 +118,8 @@ private:
     std::mutex mtx;
     std::condition_variable cond;
     std::atomic_int active;
+    Adjust adjust;
+    unsigned long thread_adjust_threshold;
 
     bool is_forward;
 
